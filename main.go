@@ -69,7 +69,7 @@ func main() {
 	flag.BoolVar(&config.TCPCork, "tcpcork", false, "coalesce writing first few packets")
 	flag.DurationVar(&config.UDPTimeout, "udptimeout", 5*time.Minute, "UDP tunnel timeout")
 
-	flag.BoolVar(&flags.MetricsEnable, "metric-enable", true, "enable collect metrics")
+	flag.BoolVar(&flags.MetricsEnable, "metric-enable", false, "enable collect metrics")
 	flag.StringVar(&flags.MetricsListen, "metric-http-listen", ":9110", "listen http for metrics. Default is :9110")
 
 	flag.Parse()

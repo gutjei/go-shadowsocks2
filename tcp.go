@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"errors"
+	"github.com/gutjei/go-shadowsocks2/metrics"
 	"io"
 	"io/ioutil"
 	"net"
@@ -10,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shadowsocks/go-shadowsocks2/socks"
+	"github.com/gutjei/go-shadowsocks2/socks"
 )
 
 // Create a SOCKS server listening on addr and proxy to server.
@@ -145,17 +146,22 @@ func tcpRemote(addr string, shadow func(net.Conn) net.Conn) {
 // relay copies between left and right bidirectionally
 func relay(left, right net.Conn) error {
 	var err, err1 error
+	var reciveBytes, tranmitBytes int64
 	var wg sync.WaitGroup
 	var wait = 5 * time.Second
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, err1 = io.Copy(right, left)
+		reciveBytes, err1 = io.Copy(right, left)
 		right.SetReadDeadline(time.Now().Add(wait)) // unblock read on right
 	}()
-	_, err = io.Copy(left, right)
+	tranmitBytes, err = io.Copy(left, right)
 	left.SetReadDeadline(time.Now().Add(wait)) // unblock read on left
 	wg.Wait()
+
+	metrics.ReceiveBytesTotal.Add(float64(reciveBytes))
+	metrics.TransmitBytesTotal.Add(float64(tranmitBytes))
+
 	if err1 != nil && !errors.Is(err1, os.ErrDeadlineExceeded) { // requires Go 1.15+
 		return err1
 	}

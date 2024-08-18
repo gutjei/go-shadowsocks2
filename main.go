@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"github.com/gutjei/go-shadowsocks2/metrics"
 	"io"
 	"log"
 	"net/url"
@@ -14,8 +15,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/shadowsocks/go-shadowsocks2/core"
-	"github.com/shadowsocks/go-shadowsocks2/socks"
+	"github.com/gutjei/go-shadowsocks2/core"
+	"github.com/gutjei/go-shadowsocks2/socks"
 )
 
 var config struct {
@@ -43,6 +44,9 @@ func main() {
 		TCP        bool
 		Plugin     string
 		PluginOpts string
+
+		MetricsEnable bool
+		MetricsListen string
 	}
 
 	flag.BoolVar(&config.Verbose, "verbose", false, "verbose mode")
@@ -64,6 +68,10 @@ func main() {
 	flag.BoolVar(&flags.TCP, "tcp", true, "(server-only) enable TCP support")
 	flag.BoolVar(&config.TCPCork, "tcpcork", false, "coalesce writing first few packets")
 	flag.DurationVar(&config.UDPTimeout, "udptimeout", 5*time.Minute, "UDP tunnel timeout")
+
+	flag.BoolVar(&flags.MetricsEnable, "metric-enable", true, "enable collect metrics")
+	flag.StringVar(&flags.MetricsListen, "metric-http-listen", ":9110", "listen http for metrics. Default is :9110")
+
 	flag.Parse()
 
 	if flags.Keygen > 0 {
@@ -85,6 +93,10 @@ func main() {
 			log.Fatal(err)
 		}
 		key = k
+	}
+
+	if flags.MetricsEnable {
+		metrics.Start(flags.MetricsListen)
 	}
 
 	if flags.Client != "" { // client mode

@@ -31,7 +31,7 @@ func tcpTun(addr, server, target string, shadow func(net.Conn) net.Conn) {
 	tcpLocal(addr, server, shadow, func(net.Conn) (socks.Addr, error) { return tgt, nil })
 }
 
-// Listen on addr and proxy to server to reach target from getAddr.
+// Listen on addr and proxy to server to reach target from getAddr. nbvnxzm,k
 func tcpLocal(addr, server string, shadow func(net.Conn) net.Conn, getAddr func(net.Conn) (socks.Addr, error)) {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -146,22 +146,17 @@ func tcpRemote(addr string, shadow func(net.Conn) net.Conn) {
 // relay copies between left and right bidirectionally
 func relay(left, right net.Conn) error {
 	var err, err1 error
-	var reciveBytes, tranmitBytes int64
 	var wg sync.WaitGroup
 	var wait = 5 * time.Second
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		reciveBytes, err1 = io.Copy(right, left)
+		_, err1 = metrics.Copy(right, left, metrics.TransmitBytesTotal)
 		right.SetReadDeadline(time.Now().Add(wait)) // unblock read on right
 	}()
-	tranmitBytes, err = io.Copy(left, right)
+	_, err = metrics.Copy(left, right, metrics.ReceiveBytesTotal)
 	left.SetReadDeadline(time.Now().Add(wait)) // unblock read on left
 	wg.Wait()
-
-	metrics.ReceiveBytesTotal.Add(float64(reciveBytes))
-	metrics.TransmitBytesTotal.Add(float64(tranmitBytes))
-
 	if err1 != nil && !errors.Is(err1, os.ErrDeadlineExceeded) { // requires Go 1.15+
 		return err1
 	}
